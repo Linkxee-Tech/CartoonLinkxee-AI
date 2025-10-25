@@ -1,0 +1,7 @@
+{
+  "name": "CartoonLinkxee AI",
+  "description": "An all-in-one AI creative suite. Generate and edit images, create videos from text or photos, chat with an AI, transcribe audio, analyze videos, and have real-time voice conversations, all powered by Gemini.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
