@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../Modal';
 import LoadingSpinner from '../LoadingSpinner';
@@ -69,6 +68,8 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
     return () => clearInterval(interval);
   }, [isLoading, loadingMessages]);
+  
+  const isAiStudioError = error === 'AI Studio context is not available.';
 
   return (
     <Modal title="Image-to-Video Generation" onClose={onClose}>
@@ -96,15 +97,15 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 {imageUrl ? (
                   <div className="text-center">
                     <img src={imageUrl} alt="Uploaded preview" className="max-h-40 rounded-lg mx-auto" />
-                    <button onClick={() => {setImageFile(null); setImageUrl(null)}} className="mt-2 text-xs text-red-400 hover:text-red-300">Remove Image</button>
+                    <button onClick={() => {if (!isAiStudioError) {setImageFile(null); setImageUrl(null)}}} disabled={isAiStudioError} className="mt-2 text-xs text-red-400 hover:text-red-300 disabled:text-gray-500 disabled:cursor-not-allowed">Remove Image</button>
                   </div>
                 ) : (
                   <div className="space-y-1 text-center">
                     <ArrowUpTrayIcon className="mx-auto h-12 w-12 text-gray-400" />
                     <div className="flex text-sm text-gray-400">
-                      <label htmlFor="file-upload" className="relative cursor-pointer bg-gray-800 rounded-md font-medium text-purple-400 hover:text-purple-500 focus-within:outline-none">
+                      <label htmlFor="file-upload" className={`relative bg-gray-800 rounded-md font-medium text-purple-400 hover:text-purple-500 focus-within:outline-none ${isAiStudioError ? 'cursor-not-allowed text-gray-500 hover:text-gray-500' : 'cursor-pointer'}`}>
                         <span>Upload a file</span>
-                        <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
+                        <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} disabled={isAiStudioError} />
                       </label>
                     </div>
                     <p className="text-xs text-gray-500">PNG, JPG, etc.</p>
@@ -114,7 +115,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </div>
           )}
           
-          <CharacterSelector selectedCharacterId={selectedCharacterId} onChange={setSelectedCharacterId} disabled={isLoading} />
+          <CharacterSelector selectedCharacterId={selectedCharacterId} onChange={setSelectedCharacterId} disabled={isLoading || isAiStudioError} />
 
           <div>
             <label htmlFor="prompt" className="block text-sm font-medium text-gray-300">Prompt</label>
@@ -125,7 +126,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder='e.g., "The character starts to run through a neon-lit city"'
               className="mt-1 w-full bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              disabled={isLoading}
+              disabled={isLoading || isAiStudioError}
             />
           </div>
 
@@ -136,17 +137,24 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   value={aspectRatio}
                   onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
                   className="mt-1 block w-full bg-gray-700 text-white border-gray-600 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  disabled={isLoading}
+                  disabled={isLoading || isAiStudioError}
               >
                   <option value="16:9">Landscape (16:9)</option>
                   <option value="9:16">Portrait (9:16)</option>
               </select>
           </div>
+          
+           {isAiStudioError && (
+            <div className="bg-red-900/50 border border-red-700/50 text-red-300 px-4 py-3 rounded-lg" role="alert">
+              <p><strong className="font-bold">AI Studio Context Not Available.</strong></p>
+              <p className="text-sm">Video generation features are only available when running within Google AI Studio.</p>
+            </div>
+           )}
 
           <div className="flex justify-end">
             <button
               onClick={handleGenerate}
-              disabled={isLoading || !prompt.trim() || !imageFile}
+              disabled={isLoading || !prompt.trim() || !imageFile || isAiStudioError}
               className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading && !isExtending ? 'Generating...' : 'Generate Video'}
@@ -157,7 +165,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         {videoUrl && !isLoading && (
           <div className="space-y-4 pt-4 border-t border-gray-700">
             <h3 className="text-lg font-medium">Extend Your Video (adds ~7s)</h3>
-            <CharacterSelector selectedCharacterId={selectedCharacterId} onChange={setSelectedCharacterId} disabled={isLoading} />
+            <CharacterSelector selectedCharacterId={selectedCharacterId} onChange={setSelectedCharacterId} disabled={isLoading || isAiStudioError} />
             <div>
               <label htmlFor="extension_prompt" className="block text-sm font-medium text-gray-300">Extension Prompt</label>
               <textarea
@@ -167,13 +175,13 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 onChange={(e) => setExtensionPrompt(e.target.value)}
                 placeholder='e.g., "And then it starts to rain neon drops"'
                 className="mt-1 w-full bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                disabled={isLoading}
+                disabled={isLoading || isAiStudioError}
               />
             </div>
             <div className="flex justify-end">
               <button
                 onClick={handleExtend}
-                disabled={isLoading || !extensionPrompt.trim()}
+                disabled={isLoading || !extensionPrompt.trim() || isAiStudioError}
                 className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading && isExtending ? 'Extending...' : 'Extend Video'}
@@ -182,7 +190,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         )}
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && !isAiStudioError && <p className="text-red-400 text-sm">{error}</p>}
 
       </div>
     </Modal>
