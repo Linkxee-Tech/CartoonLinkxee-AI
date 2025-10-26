@@ -99,8 +99,8 @@ const TextToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     className="mt-1 block w-full bg-gray-700 text-white border-gray-600 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     disabled={isLoading || isAiStudioError}
                 >
-                    <option value="16:9">Landscape (16:9)</option>
-                    <option value="9:16">Portrait (9:16)</option>
+                    <option value="16:9">Landscape (16:9) - YouTube</option>
+                    <option value="9:16">Portrait (9:16) - TikTok, Reels</option>
                 </select>
             </div>
             <div>
@@ -115,7 +115,15 @@ const TextToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <option value="short">Short (~10s)</option>
                 <option value="medium">Medium (~30s)</option>
                 <option value="long">Long (~60s)</option>
+                <option value="two_minutes">2 Minutes</option>
+                <option value="three_minutes">3 Minutes</option>
+                <option value="four_minutes">4 Minutes</option>
+                <option value="five_minutes">5 Minutes</option>
+                <option value="ten_minutes">10 Minutes</option>
+                <option value="fifteen_minutes">15 Minutes</option>
+                <option value="twenty_minutes">20 Minutes</option>
               </select>
+              <p className="text-xs text-gray-500 mt-1">Note: Generating longer videos can take a very long time.</p>
             </div>
           </div>
 

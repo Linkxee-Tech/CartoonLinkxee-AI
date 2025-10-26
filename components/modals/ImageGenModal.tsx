@@ -105,11 +105,11 @@ const ImageGenModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             className="mt-1 block w-full bg-gray-700 text-white border-gray-600 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
             disabled={isLoading}
           >
-            <option value="1:1">Square (1:1)</option>
-            <option value="16:9">Landscape (16:9)</option>
-            <option value="9:16">Portrait (9:16)</option>
-            <option value="4:3">Standard (4:3)</option>
-            <option value="3:4">Tall (3:4)</option>
+            <option value="1:1">Square (1:1) - Instagram Post</option>
+            <option value="16:9">Landscape (16:9) - YouTube, Facebook</option>
+            <option value="9:16">Portrait (9:16) - TikTok, Reels, Stories</option>
+            <option value="4:3">Standard (4:3) - Classic Photo</option>
+            <option value="3:4">Tall (3:4) - Pinterest, Facebook</option>
           </select>
         </div>
         

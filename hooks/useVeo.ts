@@ -29,9 +29,16 @@ const getExtensionCount = (duration: VideoDuration): number => {
     switch (duration) {
         case 'medium': return 3; // ~30s
         case 'long': return 8; // ~60s
+        case 'two_minutes': return 16; // ~2 minutes
+        case 'three_minutes': return 25; // ~3 minutes
+        case 'four_minutes': return 33; // ~4 minutes
+        case 'five_minutes': return 42; // ~5 minutes
+        case 'ten_minutes': return 85; // ~10 minutes
+        case 'fifteen_minutes': return 128; // ~15 minutes
+        case 'twenty_minutes': return 170; // ~20 minutes
         case 'short':
         default:
-            return 0;
+            return 0; // ~10s
     }
 };
 
