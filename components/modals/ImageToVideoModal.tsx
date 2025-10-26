@@ -3,7 +3,7 @@ import Modal from '../Modal';
 import LoadingSpinner from '../LoadingSpinner';
 import { useVeo } from '../../hooks/useVeo';
 import { ArrowUpTrayIcon } from '../Icons';
-import { AspectRatio } from '../../types';
+import { AspectRatio, VideoDuration } from '../../types';
 import { getCharacter } from '../../services/characterService';
 import CharacterSelector from '../CharacterSelector';
 
@@ -12,7 +12,8 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
-  const { videoUrl, isLoading, error, generate, reset, extend } = useVeo();
+  const [duration, setDuration] = useState<VideoDuration>('short');
+  const { videoUrl, isLoading, error, generate, reset, extend, progressMessage } = useVeo();
   const [extensionPrompt, setExtensionPrompt] = useState('');
   const [isExtending, setIsExtending] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
@@ -35,7 +36,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const handleGenerate = () => {
     if (prompt.trim() && imageFile) {
       setIsExtending(false);
-      generate(prompt, imageFile, aspectRatio, selectedCharacter);
+      generate(prompt, imageFile, aspectRatio, duration, selectedCharacter);
     }
   };
 
@@ -57,7 +58,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   useEffect(() => {
     let interval: number;
-    if (isLoading) {
+    if (isLoading && !progressMessage) {
       interval = window.setInterval(() => {
         setLoadingMessage(prev => {
           const currentIndex = loadingMessages.indexOf(prev);
@@ -67,7 +68,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [isLoading, loadingMessages]);
+  }, [isLoading, progressMessage, loadingMessages]);
   
   const isAiStudioError = error === 'AI Studio context is not available.';
 
@@ -81,7 +82,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         ) : isLoading ? (
           <div className="flex flex-col justify-center items-center h-64 bg-gray-900 rounded-lg">
-            <LoadingSpinner text={loadingMessage} />
+            <LoadingSpinner text={progressMessage || loadingMessage} />
           </div>
         ) : (
           imageUrl && <img src={imageUrl} alt="Uploaded preview" className="max-h-60 mx-auto rounded-lg" />
@@ -130,18 +131,34 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             />
           </div>
 
-          <div>
-              <label htmlFor="aspectRatio" className="block text-sm font-medium text-gray-300">Aspect Ratio</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label htmlFor="aspectRatio" className="block text-sm font-medium text-gray-300">Aspect Ratio</label>
+                <select
+                    id="aspectRatio"
+                    value={aspectRatio}
+                    onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+                    className="mt-1 block w-full bg-gray-700 text-white border-gray-600 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    disabled={isLoading || isAiStudioError}
+                >
+                    <option value="16:9">Landscape (16:9)</option>
+                    <option value="9:16">Portrait (9:16)</option>
+                </select>
+            </div>
+            <div>
+              <label htmlFor="duration" className="block text-sm font-medium text-gray-300">Duration</label>
               <select
-                  id="aspectRatio"
-                  value={aspectRatio}
-                  onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                  className="mt-1 block w-full bg-gray-700 text-white border-gray-600 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  disabled={isLoading || isAiStudioError}
+                id="duration"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value as VideoDuration)}
+                className="mt-1 block w-full bg-gray-700 text-white border-gray-600 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={isLoading || isAiStudioError}
               >
-                  <option value="16:9">Landscape (16:9)</option>
-                  <option value="9:16">Portrait (9:16)</option>
+                <option value="short">Short (~10s)</option>
+                <option value="medium">Medium (~30s)</option>
+                <option value="long">Long (~60s)</option>
               </select>
+            </div>
           </div>
           
            {isAiStudioError && (

@@ -1,57 +1,56 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { startVideoGeneration, checkVideoOperationStatus, fetchVideoFromUri, extendVideoGeneration } from '../services/geminiService';
 import type { Operation } from '@google/genai';
-import { AspectRatio, Character } from '../types';
+import { AspectRatio, Character, VideoDuration } from '../types';
+
+const waitForOperation = (operation: Operation): Promise<Operation> => {
+    return new Promise((resolve, reject) => {
+        const poller = async () => {
+            try {
+                const updatedOperation = await checkVideoOperationStatus(operation);
+                if (updatedOperation.done) {
+                    if (updatedOperation.response) {
+                        resolve(updatedOperation);
+                    } else {
+                        reject(new Error("Operation finished but no response was returned."));
+                    }
+                } else {
+                    setTimeout(poller, 10000); // Poll every 10 seconds
+                }
+            } catch (err) {
+                reject(err);
+            }
+        };
+        poller();
+    });
+};
+
+const getExtensionCount = (duration: VideoDuration): number => {
+    switch (duration) {
+        case 'medium': return 3; // ~30s
+        case 'long': return 8; // ~60s
+        case 'short':
+        default:
+            return 0;
+    }
+};
 
 export const useVeo = () => {
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [progressMessage, setProgressMessage] = useState<string | null>(null);
     const [lastOperation, setLastOperation] = useState<Operation | null>(null);
-    const pollingInterval = useRef<number | null>(null);
-
-    const stopPolling = () => {
-        if (pollingInterval.current) {
-            clearInterval(pollingInterval.current);
-            pollingInterval.current = null;
-        }
-    };
 
     const reset = useCallback(() => {
         setVideoUrl(null);
         setIsLoading(false);
         setError(null);
         setLastOperation(null);
-        stopPolling();
+        setProgressMessage(null);
     }, []);
 
-    const pollOperation = useCallback(async (operation: Operation) => {
-        pollingInterval.current = window.setInterval(async () => {
-            try {
-                const updatedOperation = await checkVideoOperationStatus(operation);
-                if (updatedOperation.done) {
-                    stopPolling();
-                    if (updatedOperation.response?.generatedVideos?.[0]?.video?.uri) {
-                        const uri = updatedOperation.response.generatedVideos[0].video.uri;
-                        const fetchedVideoUrl = await fetchVideoFromUri(uri);
-                        setVideoUrl(fetchedVideoUrl);
-                        setLastOperation(updatedOperation);
-                    } else {
-                        setError('Video generation finished, but no video was returned.');
-                    }
-                    setIsLoading(false);
-                }
-            } catch (err) {
-                stopPolling();
-                setIsLoading(false);
-                setError('An error occurred while checking video status.');
-                console.error(err);
-            }
-        }, 10000); // Poll every 10 seconds
-    }, []);
-
-
-    const generate = useCallback(async (prompt: string, imageFile: File | null, aspectRatio: AspectRatio, character?: Character) => {
+    const generate = useCallback(async (prompt: string, imageFile: File | null, aspectRatio: AspectRatio, duration: VideoDuration, character?: Character) => {
         reset();
         setIsLoading(true);
 
@@ -63,27 +62,45 @@ export const useVeo = () => {
             let hasKey = await window.aistudio.hasSelectedApiKey();
             if (!hasKey) {
                 await window.aistudio.openSelectKey();
-                // Assume success after dialog opens to avoid race condition
-                // A true check will happen with the API call itself.
             }
         
-            const operation = await startVideoGeneration(prompt, imageFile, aspectRatio, character);
-            await pollOperation(operation);
+            setProgressMessage('Generating initial clip...');
+            let operation = await startVideoGeneration(prompt, imageFile, aspectRatio, character);
+            let completedOperation = await waitForOperation(operation);
+            setLastOperation(completedOperation);
+
+            const extensionsNeeded = getExtensionCount(duration);
+            for (let i = 0; i < extensionsNeeded; i++) {
+                setProgressMessage(`Extending video (${i + 1}/${extensionsNeeded})...`);
+                operation = await extendVideoGeneration(prompt, completedOperation, character);
+                completedOperation = await waitForOperation(operation);
+                setLastOperation(completedOperation);
+            }
+
+            setProgressMessage('Finalizing video...');
+            if (completedOperation.response?.generatedVideos?.[0]?.video?.uri) {
+                const uri = completedOperation.response.generatedVideos[0].video.uri;
+                const fetchedVideoUrl = await fetchVideoFromUri(uri);
+                setVideoUrl(fetchedVideoUrl);
+            } else {
+                setError('Video generation finished, but no video was returned.');
+            }
 
         } catch (err: any) {
-            setIsLoading(false);
             let errorMessage = 'An error occurred during video generation.';
             if (err.message && err.message.includes("Requested entity was not found.")) {
                 errorMessage = "API Key not found or invalid. Please select a valid API key.";
-                // Optionally prompt to re-select key
                 window.aistudio.openSelectKey();
             } else if (err.message) {
                 errorMessage = err.message;
             }
             setError(errorMessage);
             console.error(err);
+        } finally {
+            setIsLoading(false);
+            setProgressMessage(null);
         }
-    }, [reset, pollOperation]);
+    }, [reset]);
 
     const extend = useCallback(async (prompt: string, character?: Character) => {
         if (!lastOperation) {
@@ -105,11 +122,20 @@ export const useVeo = () => {
                 await window.aistudio.openSelectKey();
             }
         
+            setProgressMessage('Extending video...');
             const operation = await extendVideoGeneration(prompt, lastOperation, character);
-            await pollOperation(operation);
+            const completedOperation = await waitForOperation(operation);
+
+            if (completedOperation.response?.generatedVideos?.[0]?.video?.uri) {
+                const uri = completedOperation.response.generatedVideos[0].video.uri;
+                const fetchedVideoUrl = await fetchVideoFromUri(uri);
+                setVideoUrl(fetchedVideoUrl);
+                setLastOperation(completedOperation);
+            } else {
+                setError('Video extension finished, but no video was returned.');
+            }
 
         } catch (err: any) {
-            setIsLoading(false);
             let errorMessage = 'An error occurred during video extension.';
             if (err.message && err.message.includes("Requested entity was not found.")) {
                 errorMessage = "API Key not found or invalid. Please select a valid API key.";
@@ -119,8 +145,11 @@ export const useVeo = () => {
             }
             setError(errorMessage);
             console.error(err);
+        } finally {
+            setIsLoading(false);
+            setProgressMessage(null);
         }
-    }, [lastOperation, pollOperation]);
+    }, [lastOperation]);
 
-    return { videoUrl, isLoading, error, generate, reset, extend };
+    return { videoUrl, isLoading, error, generate, reset, extend, progressMessage };
 };

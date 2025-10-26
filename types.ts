@@ -20,6 +20,7 @@ export enum Feature {
 }
 
 export type AspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+export type VideoDuration = 'short' | 'medium' | 'long'; // ~10s, ~30s, ~60s
 
 export interface ChatMessage {
   sender: 'user' | 'bot';
