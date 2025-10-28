@@ -1,7 +1,8 @@
 
+
+
 import { GoogleGenAI, Chat, GenerativePart, Modality } from "@google/genai";
 import type { LiveServerMessage, Operation, Video } from "@google/genai";
-// Fix: Import `VoiceType` to use in `generateSpeech`.
 import { AspectRatio, Character, VoiceMap, VoiceType } from "../types";
 import { fileToGenerativePart } from "../utils/fileUtils";
 import { decode, decodeAudioData, createPcmBlob } from "../utils/audioUtils";
@@ -137,11 +138,13 @@ export const connectToLive = async (
     onMessage: (message: LiveServerMessage) => void, 
     onError: (e: ErrorEvent) => void,
     onClose: (e: CloseEvent) => void,
-    transcriptionOnly: boolean = false
+    options: { transcriptionOnly?: boolean; character?: Character } = {}
 ) => {
+    const { transcriptionOnly = false, character } = options;
     const ai = getAiClient();
     const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
     const outputAudioContext = transcriptionOnly ? null : new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    const voiceName = character ? VoiceMap[character.voice_type] : 'Zephyr';
     
     let nextStartTime = 0;
     const sources = new Set<AudioBufferSourceNode>();
@@ -192,7 +195,7 @@ export const connectToLive = async (
             inputAudioTranscription: {},
         } : {
             responseModalities: [Modality.AUDIO],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
             inputAudioTranscription: {},
             outputAudioTranscription: {},
         },
@@ -227,16 +230,50 @@ export const analyzeVideoFrames = async (frames: string[]): Promise<string> => {
     return response.text;
 };
 
+export const transcribeVideo = async (videoFile: File): Promise<string> => {
+    const ai = getAiClient();
+    const videoPart = await fileToGenerativePart(videoFile);
+    const prompt = "Transcribe the audio from this video. Provide only the transcribed text.";
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro',
+        contents: { parts: [videoPart, { text: prompt }] },
+        config: {
+            thinkingConfig: { thinkingBudget: 32768 }
+        }
+    });
+    return response.text;
+};
+
 // === Text-to-Speech (Gemini TTS) ===
 export const generateSpeech = async (text: string, audioContext: AudioContext, character?: Character): Promise<AudioBuffer | null> => {
     const ai = getAiClient();
     const voiceName = character ? VoiceMap[character.voice_type] : 'Kore';
-    // Fix: Correctly compare against the `VoiceType` enum member instead of a string literal.
-    const final_text = character && character.voice_type === VoiceType.Robotic ? `In a robotic voice, say: ${text}` : `Say: ${text}`;
+    const finalText = character && character.voice_type === VoiceType.Robotic ? `In a robotic voice, say: ${text}` : `Say: ${text}`;
     
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: [{ parts: [{ text: final_text }] }],
+        contents: [{ parts: [{ text: finalText }] }],
+        config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
+        },
+    });
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (base64Audio) {
+        return decodeAudioData(decode(base64Audio), audioContext, 24000, 1);
+    }
+    return null;
+};
+
+export const generateSpeechWithVoice = async (text: string, voiceName: string, audioContext: AudioContext): Promise<AudioBuffer | null> => {
+    const ai = getAiClient();
+    
+    const isRobotic = voiceName === VoiceMap[VoiceType.Robotic];
+    const finalText = isRobotic ? `In a robotic voice, say: ${text}` : `Say: ${text}`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: finalText }] }],
         config: {
             responseModalities: [Modality.AUDIO],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },

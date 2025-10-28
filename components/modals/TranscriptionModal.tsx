@@ -43,7 +43,7 @@ const TranscriptionModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      const session = await connectToLive(stream, onMessage, onError, onCloseEvent, true); // Last param enables transcription only
+      const session = await connectToLive(stream, onMessage, onError, onCloseEvent, { transcriptionOnly: true });
       sessionRef.current = session;
       setIsSessionActive(true);
     } catch (err) {

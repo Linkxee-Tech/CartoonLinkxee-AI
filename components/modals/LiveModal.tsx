@@ -1,17 +1,25 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Modal from '../Modal';
 import { connectToLive, LiveSession } from '../../services/geminiService';
 import LoadingSpinner from '../LoadingSpinner';
 import { PlayCircleIcon, StopCircleIcon } from '../Icons';
 import { TranscriptionEntry } from '../../types';
 import type { LiveServerMessage } from '@google/genai';
+import CharacterSelector from '../CharacterSelector';
+import { getCharacter } from '../../services/characterService';
 
 const LiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transcriptions, setTranscriptions] = useState<TranscriptionEntry[]>([]);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+
+  const selectedCharacter = useMemo(() => {
+    if (!selectedCharacterId) return undefined;
+    return getCharacter(selectedCharacterId);
+  }, [selectedCharacterId]);
   
   const sessionRef = useRef<LiveSession | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -89,7 +97,7 @@ const LiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
         
-        const session = await connectToLive(stream, onMessage, onError, onCloseEvent);
+        const session = await connectToLive(stream, onMessage, onError, onCloseEvent, { character: selectedCharacter });
         sessionRef.current = session;
         setIsSessionActive(true);
     } catch (err) {
@@ -118,7 +126,10 @@ const LiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <Modal title="Live Conversation" onClose={onClose}>
       <div className="flex flex-col h-[60vh]">
-        <div className="flex-grow overflow-y-auto pr-2 space-y-4 bg-gray-900 p-4 rounded-lg">
+        <div className="mb-4">
+            <CharacterSelector selectedCharacterId={selectedCharacterId} onChange={setSelectedCharacterId} disabled={isConnecting || isSessionActive} />
+        </div>
+        <div className="flex-grow overflow-y-auto pr-2 space-y-4 bg-gray-900 p-4 rounded-lg border-t border-gray-700">
            {transcriptions.length === 0 && !isSessionActive && <p className="text-gray-400 text-center">Press start to begin the conversation.</p>}
            {transcriptions.map((entry, index) => (
              <div key={index} className={`flex ${entry.speaker === 'user' ? 'justify-end' : 'justify-start'}`}>

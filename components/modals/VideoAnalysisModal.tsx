@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import Modal from '../Modal';
-import { analyzeVideoFrames } from '../../services/geminiService';
+import { analyzeVideoFrames, transcribeVideo } from '../../services/geminiService';
 import LoadingSpinner from '../LoadingSpinner';
 import { ArrowUpTrayIcon } from '../Icons';
 import { extractFramesFromVideo } from '../../utils/fileUtils';
@@ -10,9 +10,12 @@ const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [captions, setCaptions] = useState<string | null>(null);
+  const [loadingTask, setLoadingTask] = useState<'analysis' | 'captions' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  const isLoading = loadingTask !== null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -20,24 +23,26 @@ const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setVideoFile(file);
       setVideoUrl(URL.createObjectURL(file));
       setAnalysis(null);
+      setCaptions(null);
       setError(null);
     }
   };
 
-  const handleAnalyze = async () => {
+  const handleVisualAnalysis = async () => {
     if (!videoRef.current) {
       setError('Video element not available.');
       return;
     }
-    setIsLoading(true);
+    setLoadingTask('analysis');
     setError(null);
     setAnalysis(null);
+    setCaptions(null);
 
     try {
       const frames = await extractFramesFromVideo(videoRef.current, 1); // 1 frame per second
       if (frames.length === 0) {
         setError('Could not extract frames from video.');
-        setIsLoading(false);
+        setLoadingTask(null);
         return;
       }
       const result = await analyzeVideoFrames(frames);
@@ -46,7 +51,28 @@ const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       console.error('Video analysis error:', err);
       setError('An error occurred during video analysis.');
     } finally {
-      setIsLoading(false);
+      setLoadingTask(null);
+    }
+  };
+  
+  const handleGenerateCaptions = async () => {
+    if (!videoFile) {
+        setError('Please upload a video file first.');
+        return;
+    }
+    setLoadingTask('captions');
+    setError(null);
+    setAnalysis(null);
+    setCaptions(null);
+
+    try {
+        const result = await transcribeVideo(videoFile);
+        setCaptions(result);
+    } catch (err) {
+        console.error('Video transcription error:', err);
+        setError('An error occurred during caption generation.');
+    } finally {
+        setLoadingTask(null);
     }
   };
 
@@ -77,7 +103,7 @@ const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         
         {isLoading && (
             <div className="flex justify-center items-center h-48 bg-gray-900 rounded-lg">
-                <LoadingSpinner text="Analyzing video frames..."/>
+                <LoadingSpinner text={loadingTask === 'analysis' ? "Analyzing video frames..." : "Generating captions..."}/>
             </div>
         )}
 
@@ -88,15 +114,29 @@ const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         )}
 
+        {captions && (
+          <div className="bg-gray-900 p-4 rounded-lg max-h-64 overflow-y-auto">
+            <h3 className="text-lg font-bold text-purple-300 mb-2">Generated Captions</h3>
+            <p className="text-gray-300 whitespace-pre-wrap">{captions}</p>
+          </div>
+        )}
+
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-4 gap-4">
           <button
-            onClick={handleAnalyze}
+            onClick={handleVisualAnalysis}
             disabled={isLoading || !videoFile}
             className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
           >
-            {isLoading ? <LoadingSpinner /> : 'Analyze Video'}
+            {loadingTask === 'analysis' ? <LoadingSpinner /> : 'Analyze Video'}
+          </button>
+          <button
+            onClick={handleGenerateCaptions}
+            disabled={isLoading || !videoFile}
+            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+          >
+            {loadingTask === 'captions' ? <LoadingSpinner /> : 'Generate Captions'}
           </button>
         </div>
       </div>
