@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../Modal';
 import { generateSpeech } from '../../services/geminiService';
@@ -5,6 +6,7 @@ import { getCharacter } from '../../services/characterService';
 import LoadingSpinner from '../LoadingSpinner';
 import CharacterSelector from '../CharacterSelector';
 import { PlayCircleIcon, StopCircleIcon } from '../Icons';
+import { getFriendlyErrorMessage } from '../../utils/errorHandler';
 
 const TTSModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [text, setText] = useState('');
@@ -76,7 +78,7 @@ const TTSModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }
     } catch (err) {
       console.error('Speech generation error:', err);
-      setError('An error occurred while generating the speech.');
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

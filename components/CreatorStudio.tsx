@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { APP_NAME, FEATURES } from '../constants';
 import { Feature } from '../types';
 import FeatureCard from './FeatureCard';
+import LoadingSpinner from './LoadingSpinner';
 
 // Lazy load modals to improve initial load time
 const ImageGenModal = React.lazy(() => import('./modals/ImageGenModal'));
@@ -15,7 +16,6 @@ const TranscriptionModal = React.lazy(() => import('./modals/TranscriptionModal'
 const VideoAnalysisModal = React.lazy(() => import('./modals/VideoAnalysisModal'));
 const TTSModal = React.lazy(() => import('./modals/TTSModal'));
 const StoryGenModal = React.lazy(() => import('./modals/StoryGenModal'));
-const LoadingSpinner = React.lazy(() => import('./LoadingSpinner'));
 
 
 const CreatorStudio: React.FC = () => {

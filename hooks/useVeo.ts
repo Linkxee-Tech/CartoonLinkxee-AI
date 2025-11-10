@@ -1,7 +1,9 @@
+
 import { useState, useCallback } from 'react';
 import { startVideoGeneration, checkVideoOperationStatus, fetchVideoFromUri, extendVideoGeneration } from '../services/geminiService';
 import type { Operation } from '@google/genai';
 import { AspectRatio, Character, VideoDuration } from '../types';
+import { getFriendlyErrorMessage } from '../utils/errorHandler';
 
 const waitForOperation = (operation: Operation): Promise<Operation> => {
     return new Promise((resolve, reject) => {
@@ -94,15 +96,15 @@ export const useVeo = () => {
             }
 
         } catch (err: any) {
-            let errorMessage = 'An error occurred during video generation.';
-            if (err.message && err.message.includes("Requested entity was not found.")) {
-                errorMessage = "API Key not found or invalid. Please select a valid API key.";
-                window.aistudio.openSelectKey();
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-            setError(errorMessage);
             console.error(err);
+            if (err.message && err.message.includes("Requested entity was not found.")) {
+                setError("API Key not found or invalid. Please select a valid API key.");
+                if (window.aistudio?.openSelectKey) {
+                    window.aistudio.openSelectKey();
+                }
+            } else {
+                setError(getFriendlyErrorMessage(err));
+            }
         } finally {
             setIsLoading(false);
             setProgressMessage(null);
@@ -143,15 +145,15 @@ export const useVeo = () => {
             }
 
         } catch (err: any) {
-            let errorMessage = 'An error occurred during video extension.';
-            if (err.message && err.message.includes("Requested entity was not found.")) {
-                errorMessage = "API Key not found or invalid. Please select a valid API key.";
-                window.aistudio.openSelectKey();
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-            setError(errorMessage);
             console.error(err);
+            if (err.message && err.message.includes("Requested entity was not found.")) {
+                setError("API Key not found or invalid. Please select a valid API key.");
+                if (window.aistudio?.openSelectKey) {
+                    window.aistudio.openSelectKey();
+                }
+            } else {
+                setError(getFriendlyErrorMessage(err));
+            }
         } finally {
             setIsLoading(false);
             setProgressMessage(null);

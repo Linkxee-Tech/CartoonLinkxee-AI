@@ -5,6 +5,7 @@ import { analyzeVideoFrames, transcribeVideo } from '../../services/geminiServic
 import LoadingSpinner from '../LoadingSpinner';
 import { ArrowUpTrayIcon } from '../Icons';
 import { extractFramesFromVideo } from '../../utils/fileUtils';
+import { getFriendlyErrorMessage } from '../../utils/errorHandler';
 
 const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -49,7 +50,7 @@ const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setAnalysis(result);
     } catch (err) {
       console.error('Video analysis error:', err);
-      setError('An error occurred during video analysis.');
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setLoadingTask(null);
     }
@@ -70,7 +71,7 @@ const VideoAnalysisModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setCaptions(result);
     } catch (err) {
         console.error('Video transcription error:', err);
-        setError('An error occurred during caption generation.');
+        setError(getFriendlyErrorMessage(err));
     } finally {
         setLoadingTask(null);
     }

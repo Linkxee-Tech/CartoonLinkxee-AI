@@ -5,6 +5,7 @@ import { editImage, generatePromptInspiration } from '../../services/geminiServi
 import LoadingSpinner from '../LoadingSpinner';
 import { ArrowUpTrayIcon, SparklesIcon } from '../Icons';
 import { fileToGenerativePart } from '../../utils/fileUtils';
+import { getFriendlyErrorMessage } from '../../utils/errorHandler';
 
 const ImageEditModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [prompt, setPrompt] = useState('');
@@ -43,7 +44,7 @@ const ImageEditModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }
     } catch (err) {
       console.error('Image generation error:', err);
-      setError('An error occurred while generating the image.');
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -51,11 +52,12 @@ const ImageEditModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   
   const handleInspire = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const inspiration = await generatePromptInspiration("an edit for a photo");
       setPrompt(inspiration);
     } catch (err) {
-      setError("Failed to get inspiration.");
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

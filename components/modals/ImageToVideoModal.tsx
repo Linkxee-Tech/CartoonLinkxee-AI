@@ -7,6 +7,14 @@ import { AspectRatio, VideoDuration } from '../../types';
 import { getCharacter } from '../../services/characterService';
 import CharacterSelector from '../CharacterSelector';
 
+const loadingMessages = [
+  "Warming up the digital canvas...",
+  "Teaching pixels to dance...",
+  "Brewing a fresh pot of creativity...",
+  "This can take a few minutes, hang tight!",
+  "Assembling your cinematic masterpiece...",
+];
+
 const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [prompt, setPrompt] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -46,14 +54,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       extend(extensionPrompt, selectedCharacter);
     }
   };
-
-  const loadingMessages = [
-    "Warming up the digital canvas...",
-    "Teaching pixels to dance...",
-    "Brewing a fresh pot of creativity...",
-    "This can take a few minutes, hang tight!",
-    "Assembling your cinematic masterpiece...",
-  ];
+  
   const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
 
   useEffect(() => {
@@ -68,7 +69,7 @@ const ImageToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [isLoading, progressMessage, loadingMessages]);
+  }, [isLoading, progressMessage]);
   
   const isAiStudioError = error === 'AI Studio context is not available.';
 

@@ -6,6 +6,14 @@ import { AspectRatio, VideoDuration } from '../../types';
 import CharacterSelector from '../CharacterSelector';
 import { getCharacter } from '../../services/characterService';
 
+const loadingMessages = [
+  "Spinning up the virtual film crew...",
+  "Directing a symphony of pixels...",
+  "Rendering your vision into reality...",
+  "Video generation can take a few minutes. Please wait.",
+  "Finalizing the cut, adding the polish...",
+];
+
 const TextToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
@@ -34,13 +42,6 @@ const TextToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
   };
 
-  const loadingMessages = [
-    "Spinning up the virtual film crew...",
-    "Directing a symphony of pixels...",
-    "Rendering your vision into reality...",
-    "Video generation can take a few minutes. Please wait.",
-    "Finalizing the cut, adding the polish...",
-  ];
   const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
 
   useEffect(() => {
@@ -55,7 +56,7 @@ const TextToVideoModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [isLoading, progressMessage, loadingMessages]);
+  }, [isLoading, progressMessage]);
 
   const isAiStudioError = error === 'AI Studio context is not available.';
 

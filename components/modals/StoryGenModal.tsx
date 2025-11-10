@@ -5,6 +5,7 @@ import { generateStoryForImage } from '../../services/geminiService';
 import LoadingSpinner from '../LoadingSpinner';
 import { ArrowUpTrayIcon } from '../Icons';
 import { fileToGenerativePart } from '../../utils/fileUtils';
+import { getFriendlyErrorMessage } from '../../utils/errorHandler';
 
 const StoryGenModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [image, setImage] = useState<File | null>(null);
@@ -38,7 +39,7 @@ const StoryGenModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setStory(result);
     } catch (err) {
       console.error('Story generation error:', err);
-      setError('An error occurred while generating the story.');
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

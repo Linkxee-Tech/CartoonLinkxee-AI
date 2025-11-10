@@ -7,6 +7,7 @@ import LoadingSpinner from '../LoadingSpinner';
 import { AspectRatio } from '../../types';
 import { SparklesIcon } from '../Icons';
 import CharacterSelector from '../CharacterSelector';
+import { getFriendlyErrorMessage } from '../../utils/errorHandler';
 
 const ImageGenModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [prompt, setPrompt] = useState('');
@@ -39,7 +40,7 @@ const ImageGenModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       }
     } catch (err) {
       console.error('Image generation error:', err);
-      setError('An error occurred while generating the image.');
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -47,11 +48,12 @@ const ImageGenModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const handleInspire = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const inspiration = await generatePromptInspiration("an image");
       setPrompt(inspiration);
     } catch (err) {
-      setError("Failed to get inspiration.");
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

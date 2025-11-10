@@ -8,6 +8,7 @@ import { TranscriptionEntry } from '../../types';
 import type { LiveServerMessage } from '@google/genai';
 import CharacterSelector from '../CharacterSelector';
 import { getCharacter } from '../../services/characterService';
+import { getFriendlyErrorMessage } from '../../utils/errorHandler';
 
 const LiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -32,6 +33,14 @@ const LiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   useEffect(scrollToBottom, [transcriptions]);
+
+  const stopSession = useCallback(() => {
+    sessionRef.current?.close();
+    sessionRef.current = null;
+    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+    setIsSessionActive(false);
+  }, []);
 
   const onMessage = useCallback((message: LiveServerMessage) => {
     let inputTextChanged = false;
@@ -77,14 +86,14 @@ const LiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const onError = useCallback((e: ErrorEvent) => {
     console.error('Live session error:', e);
-    setError('A connection error occurred.');
+    setError(`A connection error occurred: ${e.message}`);
     stopSession();
-  }, []);
+  }, [stopSession]);
 
   const onCloseEvent = useCallback((e: CloseEvent) => {
     console.log('Live session closed');
     stopSession();
-  }, []);
+  }, [stopSession]);
 
 
   const startSession = async () => {
@@ -102,26 +111,17 @@ const LiveModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setIsSessionActive(true);
     } catch (err) {
         console.error('Failed to start session:', err);
-        setError('Could not access microphone. Please check permissions.');
+        setError(getFriendlyErrorMessage(err));
     } finally {
         setIsConnecting(false);
     }
-  };
-
-  const stopSession = () => {
-    sessionRef.current?.close();
-    sessionRef.current = null;
-    streamRef.current?.getTracks().forEach(track => track.stop());
-    streamRef.current = null;
-    setIsSessionActive(false);
   };
   
   useEffect(() => {
     return () => {
         stopSession();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [stopSession]);
 
   return (
     <Modal title="Live Conversation" onClose={onClose}>

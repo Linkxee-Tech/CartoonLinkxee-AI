@@ -8,6 +8,7 @@ import LoadingSpinner from '../LoadingSpinner';
 import { PaperAirplaneIcon } from '../Icons';
 import CharacterSelector from '../CharacterSelector';
 import type { Chat } from '@google/genai';
+import { getFriendlyErrorMessage } from '../../utils/errorHandler';
 
 
 const ChatModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -62,7 +63,8 @@ const ChatModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error('Chat error:', error);
-      const errorMessage: ChatMessage = { sender: 'bot', text: 'Sorry, something went wrong.' };
+      const friendlyMessage = getFriendlyErrorMessage(error);
+      const errorMessage: ChatMessage = { sender: 'bot', text: friendlyMessage };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
